@@ -26,6 +26,8 @@ IV: PairingVar<I>,
 {
     fn generate_constraints(self, cs: ConstraintSystemRef<I::ScalarField>) -> Result<(), SynthesisError> {
         let a: FpVar<<I as Pairing>::ScalarField> = FpVar::new_witness(cs, || Ok(self.x))?;
+        //ERROR HERE
+        //the trait bound `<IV as ark_r1cs_std::pairing::PairingVar<I>>::G1Var: ark_r1cs_std::alloc::AllocVar<_, <I as Pairing>::ScalarField>` is not satisfied
         let b = IV::G1Var::new_witness(cs, || Ok(self.y))?;
 
         Ok(())
