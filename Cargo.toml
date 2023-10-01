@@ -12,19 +12,22 @@ ark-ec = { version = "^0.4.0"}
 ark-poly = {version = "^0.4.0"}
 ark-crypto-primitives = {version = "^0.4.0", features = ["sponge"] }
 ark-std = { version = "^0.4.0", default-features = false }
-
+ark-groth16 = "0.4.0"
+ark-test-curves = { wversion = "^0.4.0", features = ["bls12_381_curve"] }
 ark-relations = { version = "^0.4.0"}
 ark-r1cs-std = { version = "^0.4.0"}
-ark-bls12-377 = { version = "^0.4.0", features = [ "curve" ] }
+ark-bls12-377 = { version = "^0.4.0", features = [ "curve" , "r1cs" ] }
 num-bigint = { version = "0.4", default-features = false }
-
+rand_core = { version = "0.6", features = ["getrandom"] }
+ark-bls12-381 = { version = "^0.4.0", features = ["curve"] }
 
 derivative = { version = "2", features = [ "use_core" ] }
 rayon = { version = "1"}
 
 [dev-dependencies]
-ark-bls12-381 = { version = "^0.4.0", features = [ "curve" ] }
+ark-bls12-381 = { version = "^0.4.0", features = [ "curve"] }
 ark-bls12-377 = { version = "^0.4.0", features = [ "curve", "r1cs"]  }
+rand_chacha = "0.3.1"
 
 [features]
 default = ["std"]

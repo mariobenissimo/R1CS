@@ -17,7 +17,7 @@ use ark_std::{
 };
 use std::borrow::Borrow;
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 struct KeyVerification<I, IV>
 where
     I: Pairing,
@@ -106,5 +106,55 @@ mod tests {
             .unwrap();
 
         assert!(cs.is_satisfied().unwrap());
+    }
+}
+mod testGroth {
+
+    use ark_crypto_primitives::snark::SNARK;
+    use ark_groth16::{Groth16};
+    use ark_r1cs_std::fields::nonnative::params;
+    use crate::pairing::Pairing;
+    // use ark_bls12_377::{constraints::PairingVar as IV, constraints::*, Bls12_377 as I};
+    use ark_bls12_377::{Bls12_377, Fr, Config};
+    use super::*;
+    use ark_ec::bls12::Bls12;
+    use ark_relations::r1cs::ConstraintSystem;
+    use ark_std::rand::{distributions::Uniform, Rng};
+    
+    #[test]
+    fn test_prove_and_verify()
+    {   
+        // let mut rng = ark_std::test_rng();
+        // let x = <Bls12<ark_bls12_377::Config> as Pairing>::G1::rand(&mut rng);
+        // let y = <Bls12<ark_bls12_377::Config> as Pairing>::G2::rand(&mut rng);
+        // let x_prep = <Bls12<ark_bls12_377::Config> as Pairing>::G1Prepared::from(x);
+        // let y_prep =<Bls12<ark_bls12_377::Config> as Pairing>::G2Prepared::from(y);
+        // let z = Bls12_377::pairing(x_prep, y_prep);
+
+        // let circ = KeyVerification::<I,IV>{
+        //     x: x,
+        //     y: y,
+        //     z: z,
+        //     _iv: PhantomData,
+        //     _i: PhantomData,
+        // };
+
+        // let (pk, vk) = Groth16::<Bls12_377>::circuit_specific_setup(
+        //     KeyVerification::<> { x: None, y:None , z: PairingOutput(0), _iv: PhantomData, _i: PhantomData},
+        //     rng,
+        // )
+        // .unwrap();
+
+
+        // let proof1 = Groth16::<Bls12_377>::prove(
+        //     &pk,
+        //     circ,
+        //     & mut rng,
+        // )
+        // .unwrap();
+
+    
+
+
     }
 }
