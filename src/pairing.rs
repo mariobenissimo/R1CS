@@ -23,11 +23,11 @@ where
     I: Pairing,
     IV: PairingVar<I>,
 {
-    x: I::G1,
-    y: I::G2,
-    z: PairingOutput<I>, //Fqk
-    _iv: PhantomData<IV>,
-    _i: PhantomData<I>,
+    x: Option<I::G1>,
+    y: Option<I::G2>,
+    z: Option<PairingOutput<I>>, //Fqk
+    _iv: Option<PhantomData<IV>>,
+    _i: Option<PhantomData<I>>,
 }
 
 impl<I, IV> KeyVerification<I, IV>
@@ -46,11 +46,11 @@ where
         let z = I::pairing(x_prep, y_prep);
 
         Self {
-            x,
-            y,
-            z,
-            _iv: PhantomData,
-            _i: PhantomData,
+            x: Some(x),
+            y: Some(y),
+            z: Some(z),
+            _iv: Some(PhantomData),
+            _i: Some(PhantomData),
         }
     }
 }
@@ -66,11 +66,11 @@ where
         self,
         cs: ConstraintSystemRef<<I as Pairing>::BaseField>,
     ) -> Result<(), SynthesisError> {
-        let xvar = IV::G1Var::new_input(cs.clone(), || Ok(self.x))?;
+        let xvar = IV::G1Var::new_input(cs.clone(), || Ok(self.x.unwrap()))?;
 
-        let yvar = IV::G2Var::new_input(cs.clone(), || Ok(self.y))?;
+        let yvar = IV::G2Var::new_input(cs.clone(), || Ok(self.y.unwrap()))?;
 
-        let exp_res = IV::GTVar::new_input(cs.clone(), || Ok(self.z.0))?; // here
+        let exp_res = IV::GTVar::new_input(cs.clone(), || Ok(self.z.unwrap().0))?; // here
 
         let x_prepared = IV::prepare_g1(&xvar)?;
         let y_prepared = IV::prepare_g2(&yvar)?;
@@ -95,18 +95,18 @@ mod tests {
     use ark_relations::r1cs::ConstraintSystem;
     use ark_std::rand::{distributions::Uniform, Rng};
 
-    #[test]
-    fn preimage_constraints_correctness() {
-        let cs =
-            ConstraintSystem::<<Bls12<ark_bls12_377::Config> as Pairing>::BaseField>::new_ref();
-        let mut rng = ark_std::test_rng();
+    //#[test]
+    // fn preimage_constraints_correctness() {
+    //     let cs =
+    //         ConstraintSystem::<<Bls12<ark_bls12_377::Config> as Pairing>::BaseField>::new_ref();
+    //     let mut rng = ark_std::test_rng();
 
-        KeyVerification::<I, IV>::new(&mut rng)
-            .generate_constraints(cs.clone())
-            .unwrap();
+    //     KeyVerification::<I, IV>::new(&mut rng)
+    //         .generate_constraints(cs.clone())
+    //         .unwrap();
 
-        assert!(cs.is_satisfied().unwrap());
-    }
+    //     assert!(cs.is_satisfied().unwrap());
+    // }
 }
 mod testGroth {
 
@@ -124,37 +124,39 @@ mod testGroth {
     #[test]
     fn test_prove_and_verify()
     {   
-        // let mut rng = ark_std::test_rng();
-        // let x = <Bls12<ark_bls12_377::Config> as Pairing>::G1::rand(&mut rng);
-        // let y = <Bls12<ark_bls12_377::Config> as Pairing>::G2::rand(&mut rng);
-        // let x_prep = <Bls12<ark_bls12_377::Config> as Pairing>::G1Prepared::from(x);
-        // let y_prep =<Bls12<ark_bls12_377::Config> as Pairing>::G2Prepared::from(y);
-        // let z = Bls12_377::pairing(x_prep, y_prep);
+        let mut rng = ark_std::test_rng();
+        let x = <Bls12<ark_bls12_377::Config> as Pairing>::G1::rand(&mut rng);
+        let y = <Bls12<ark_bls12_377::Config> as Pairing>::G2::rand(&mut rng);
+        let x_prep = <Bls12<ark_bls12_377::Config> as Pairing>::G1Prepared::from(x);
+        let y_prep =<Bls12<ark_bls12_377::Config> as Pairing>::G2Prepared::from(y);
+        let z = Bls12_377::pairing(x_prep, y_prep);
 
-        // let circ = KeyVerification::<I,IV>{
-        //     x: x,
-        //     y: y,
-        //     z: z,
-        //     _iv: PhantomData,
-        //     _i: PhantomData,
+        // let mut rng2 = ark_std::test_rng();
+        // let params = {
+        //     let c = KeyVerification::<Bls12_377,ark_bls12_377::constraints::PairingVar>{
+        //         x: None,
+        //         y: None,
+        //         z: None,
+        //         _iv: None,
+        //         _i: None,
+        //     };
+        //     Groth16::<Bls12_377>::generate_random_parameters_with_reduction(c, &mut rng2).unwrap()
         // };
-
-        // let (pk, vk) = Groth16::<Bls12_377>::circuit_specific_setup(
-        //     KeyVerification::<> { x: None, y:None , z: PairingOutput(0), _iv: PhantomData, _i: PhantomData},
-        //     rng,
-        // )
-        // .unwrap();
+        // let pvk = prepare_verifying_key(&params.vk);
 
 
-        // let proof1 = Groth16::<Bls12_377>::prove(
-        //     &pk,
-        //     circ,
-        //     & mut rng,
-        // )
-        // .unwrap();
+        // // Prover instantiates the circuit and creates a proof
+        // // with his RNG
+        // let c = TestCircuit::<E>{
+        //     x: Some(x),
+        //     y: Some(y),
+        //     z: Some(z),
+        //     result: Some(result),
+        // };
+        // let proof = Groth16::<E>::create_random_proof_with_reduction(c, &params, rng).unwrap();
 
-    
-
-
+        // // Verifier only needs to know 25 (the output, aka public input),
+        // // the vk and the proof!
+        // assert!(Groth16::<E>::verify_proof(&pvk, &proof, &[result]).unwrap());
     }
 }

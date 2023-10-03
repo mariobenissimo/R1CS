@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 ark-serialize = { version = "^0.4.0", features = [ "derive" ] }
 ark-ff = { version = "^0.4.0"}
-ark-ec = { version = "^0.4.0"}
 ark-poly = {version = "^0.4.0"}
 ark-crypto-primitives = {version = "^0.4.0", features = ["sponge"] }
 ark-std = { version = "^0.4.0", default-features = false }
@@ -20,9 +19,9 @@ ark-bls12-377 = { version = "^0.4.0", features = [ "curve" , "r1cs" ] }
 num-bigint = { version = "0.4", default-features = false }
 rand_core = { version = "0.6", features = ["getrandom"] }
 ark-bls12-381 = { version = "^0.4.0", features = ["curve"] }
-
 derivative = { version = "2", features = [ "use_core" ] }
 rayon = { version = "1"}
+ark-ec = "0.4.2"
 
 [dev-dependencies]
 ark-bls12-381 = { version = "^0.4.0", features = [ "curve"] }
@@ -31,4 +30,4 @@ rand_chacha = "0.3.1"
 
 [features]
 default = ["std"]
-std = [ "ark-ff/std", "ark-relations/std", "ark-std/std", "num-bigint/std" ]
+std = ["ark-ff/std", "ark-relations/std", "ark-std/std", "num-bigint/std"]
