@@ -46,7 +46,7 @@ mod tests {
     use ark_bls12_377::{Bls12_377};
     use ark_groth16::{Groth16};
     use ark_bls12_377::{constraints::PairingVar as IV, constraints::*, Bls12_377 as I};
-    // no need to run these tests, they're just added as a guideline for how t
+
     #[test]
     fn test_square_root_curve() {
         let rng  = &mut ark_std::test_rng();
