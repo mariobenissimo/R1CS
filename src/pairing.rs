@@ -131,17 +131,17 @@ mod testGroth {
         let y_prep =<Bls12<ark_bls12_377::Config> as Pairing>::G2Prepared::from(y);
         let z = Bls12_377::pairing(x_prep, y_prep);
 
-        // let mut rng2 = ark_std::test_rng();
-        // let params = {
-        //     let c = KeyVerification::<Bls12_377,ark_bls12_377::constraints::PairingVar>{
-        //         x: None,
-        //         y: None,
-        //         z: None,
-        //         _iv: None,
-        //         _i: None,
-        //     };
-        //     Groth16::<Bls12_377>::generate_random_parameters_with_reduction(c, &mut rng2).unwrap()
-        // };
+        let mut rng2 = ark_std::test_rng();
+        let params = {
+            let c = KeyVerification::<Bls12_377,ark_bls12_377::constraints::PairingVar>{
+                x: None,
+                y: None,
+                z: None,
+                _iv: None,
+                _i: None,
+            };
+            Groth16::<Bls12_377>::generate_random_parameters_with_reduction(c, &mut rng2).unwrap()
+        };
         // let pvk = prepare_verifying_key(&params.vk);
 
 
