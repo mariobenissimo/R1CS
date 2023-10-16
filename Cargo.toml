@@ -22,10 +22,12 @@ ark-bls12-381 = { version = "^0.4.0", features = ["curve"] }
 derivative = { version = "2", features = [ "use_core" ] }
 rayon = { version = "1"}
 ark-ec = "0.4.2"
+ark-bw6-761 = { version = "^0.4.0" }
 
 [dev-dependencies]
 ark-bls12-381 = { version = "^0.4.0", features = [ "curve"] }
 ark-bls12-377 = { version = "^0.4.0", features = [ "curve", "r1cs"]  }
+ark-mnt4-298 = { version = "0.4.0", default-features = false, features = ["r1cs", "curve"] }
 rand_chacha = "0.3.1"
 
 [features]
