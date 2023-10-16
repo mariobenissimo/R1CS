@@ -23,14 +23,16 @@ use std::{
     borrow::Borrow,
     ops::{Mul, MulAssign},
 };
+use core::convert::AsMut;
 
 struct PairingVerification<I, IV>
 where
     I: Pairing,
     IV: PairingVar<I>,
 {
-    pubs: Option<Vec<I::G1>>,
-    result: Option<I::G1>,
+    pubs_g1: Option<Vec<I::G1>>,
+    pubs_g2: Option<Vec<I::G2>>,
+    result: Option<PairingOutput<I>>,
     _iv: Option<PhantomData<IV>>,
     _i: Option<PhantomData<I>>,
 }
@@ -42,7 +44,8 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            pubs: self.pubs.clone(),
+            pubs_g1: self.pubs_g1.clone(),
+            pubs_g2: self.pubs_g2.clone(),
             result: self.result,
             _iv: self._iv,
             _i: self._i,
@@ -59,16 +62,30 @@ where
     pub fn new<R: Rng>(mut rng: R) -> Self {
         let a = I::G1::rand(&mut rng);
         let b = I::G1::rand(&mut rng);
-        let mut pubs = Vec::new();
-        // Add two values to the vec.
-        pubs.push(a);
-        pubs.push(b);
+        let c = I::G2::rand(&mut rng);
+        let d = I::G2::rand(&mut rng);
+        let mut pubs_g1 = Vec::new();
+        let mut pubs_g2 = Vec::new();
+        pubs_g1.push(a);
+        pubs_g1.push(b);
+        pubs_g2.push(c);
+        pubs_g2.push(d);
+        let mut ps = Vec::new();
+        let mut qs = Vec::new();
+        let a_prep = I::G1Prepared::from(a);
+        let b_prep = I::G1Prepared::from(b);
+        let c_prep = I::G2Prepared::from(c);
+        let d_prep = I::G2Prepared::from(d);
+        ps.push(a_prep);
+        ps.push(b_prep);
+        qs.push(c_prep);
+        qs.push(d_prep);
+        let ml_result = I::multi_miller_loop(ps, qs);
+        let result = I::final_exponentiation(ml_result).unwrap();
 
-        let result = a + b;
-        // ... and check that the two representations are equal.
-        assert_eq!(a + b, result);
         Self {
-            pubs: Some(pubs),
+            pubs_g1: Some(pubs_g1),
+            pubs_g2: Some(pubs_g2),
             result: Some(result),
             _iv: Some(PhantomData),
             _i: Some(PhantomData),
@@ -80,31 +97,29 @@ where
     I: Pairing,
     IV: PairingVar<I>,
     IV::G1Var: CurveVar<I::G1, I::BaseField>,
+    IV::G2Var: CurveVar<I::G2, I::BaseField>,
+    IV::GTVar: FieldVar<I::TargetField, I::BaseField>,
 {
     fn generate_constraints(
         self,
         cs: ConstraintSystemRef<<I as Pairing>::BaseField>,
     ) -> Result<(), SynthesisError> {
-        let coeffs: Vec<_> = 
-        self.pubs.unwrap()
-            .into_iter()
-            .map(|coeff| {
-                let pvar = IV::G1Var::new_variable(
-                    ark_relations::ns!(cs, "generate_p1"),
-                    || Ok(coeff),
-                    AllocationMode::Witness,
-                ).unwrap();
-                Ok(pvar)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-       // let a_var = IV::G1Var::new_input(cs.clone(), || Ok(self.a.unwrap()))?;
 
-       // let b_var = IV::G1Var::new_input(cs.clone(), || Ok(self.b.unwrap()))?;
 
-        let result_var = IV::G1Var::new_witness(cs.clone(), || Ok(self.result.unwrap()))?;
-        let result = coeffs[0].clone() + coeffs[1].clone();
-
-        result_var.enforce_equal(&result)?;
+        let mut ps = Vec::new();
+        let mut qs = Vec::new();
+        for (p, q) in self.pubs_g1.unwrap().into_iter().zip(self.pubs_g2.unwrap().into_iter()){
+            let bg = IV::G1Var::new_witness(cs.clone(), || Ok(p)).unwrap();
+            let ag = IV::G2Var::new_witness(cs.clone(), || Ok(q)).unwrap();
+            let pag = IV::prepare_g1(&bg).unwrap();
+            let pbg = IV::prepare_g2(&ag).unwrap();
+            ps.push(pag);
+            qs.push(pbg);
+        }
+        let result = IV::miller_loop(&ps, &qs).unwrap();
+        let res = IV::final_exponentiation(&result).unwrap();
+        let result_var = IV::GTVar::new_input(cs.clone(), || Ok(self.result.unwrap().0))?;
+        result_var.enforce_equal(&res);
         Ok(())
     }
 }
@@ -150,40 +165,14 @@ mod test_groth {
     use rand_core::OsRng;
     use rand_core::SeedableRng;
     #[test]
-    fn prova() {
+    fn test_prove_and_verify() {
         let mut rng = ark_std::test_rng();
         let circuit = PairingVerification::<I, IV>::new(&mut rng);
         let mut rng2 = rand_chacha::ChaChaRng::seed_from_u64(1776);
         let (pk, vk) = Groth16::<P>::circuit_specific_setup(circuit.clone(), &mut rng2).unwrap();
         let proof = Groth16::<P>::prove(&pk, circuit.clone(), &mut OsRng).unwrap();
-        
-        let inputs = circuit.clone()
-            .pubs.unwrap()
-            .iter()
-            .flat_map(|p| p.to_field_elements().unwrap())
-            .collect::<Vec<_>>();
-        
-        let ok = Groth16::<P>::verify(&pk.vk, &[], &proof).unwrap();
+        let public_inputs = circuit.clone().result.unwrap().0.to_field_elements().unwrap();
+        let ok = Groth16::<P>::verify(&pk.vk, &public_inputs , &proof).unwrap();
         assert!(ok);
-    }
-    #[test]
-    fn test_prove_and_verify2() {
-        // let mut rng = ark_std::test_rng();
-        // let mut rng2 = rand_chacha::ChaChaRng::seed_from_u64(1776);
-        // let circuit = PairingVerification::<I, IV>::new(&mut rng);
-        // let params =
-        //     Groth16::<P>::generate_random_parameters_with_reduction(circuit.clone(), &mut rng2)
-        //         .unwrap();
-        // let pvk = prepare_verifying_key(&params.vk);
-        // let proof =
-        //     Groth16::<P>::create_random_proof_with_reduction(circuit.clone(), &params, &mut rng)
-        //         .unwrap();
-        // let public_inputs = circuit
-        //     .clone()
-        //     .result
-        //     .iter()
-        //     .flat_map(|p| p.to_field_elements().unwrap())
-        //     .collect::<Vec<_>>();
-        // assert!(Groth16::<P>::verify_proof(&pvk, &proof, &public_inputs).unwrap());
     }
 }
