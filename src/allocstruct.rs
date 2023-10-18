@@ -22,6 +22,7 @@ use ark_std::{
     rand::{CryptoRng, Rng},
     UniformRand,
 };
+use rayon::result;
 use std::{
     borrow::Borrow,
     ops::{Mul, MulAssign},
@@ -51,6 +52,7 @@ pub struct Global<E: Pairing, IV: PairingVar<E>> {
 
     pub gens: Generators<E,IV>,
     pub scals: Scalars<E,IV>,
+    pub result: E::TargetField,
 }
 
 impl<E, IV> Clone for Generators<E, IV>
@@ -123,6 +125,7 @@ where
         Self {
             gens: self.gens.clone(),
             scals: self.scals.clone(),
+            result: self.result,
         }
     }
 }
@@ -136,21 +139,25 @@ where
 
         let g = E::G1Affine::rand(&mut rng);
         let h = E::G2Affine::rand(&mut rng);
-        let pk = VerifierKey1::<E,IV>{
+        let gens: Generators<E, IV> = Generators::<E,IV>{
             g,
             h,
             _iv: PhantomData,
         };
-        let a = E::G1Affine::rand(&mut rng);
-        let b = E::G2Affine::rand(&mut rng);
-        let sk = VerifierKey2::<E,IV>{
+        let a = E::ScalarField::rand(&mut rng);
+        let b = E::ScalarField::rand(&mut rng);
+        let scals = Scalars::<E,IV>{
             a,
             b,
             _iv: PhantomData,
         };
+        let ag = g.mul(a);
+        let bh = h.mul(b);
+        let result = E::pairing(ag,bh);
         Self {
-            pk,
-            sk,
+            gens,
+            scals,
+            result: result.0,
         }
     }
 }
@@ -166,7 +173,17 @@ where
         self,
         cs: ConstraintSystemRef<<I as Pairing>::BaseField>,
     ) -> Result<(), SynthesisError> {
-        let (c1,c2) = self.pk.ver_alloc_var(cs, AllocationMode::Witness).unwrap();
+        let (g_var,h_var) = self.gens.ver_alloc_var(cs.clone(), AllocationMode::Witness).unwrap();
+        let (a_var,b_var) = self.scals.ver_alloc_var(cs.clone(), AllocationMode::Witness).unwrap();
+        let res_var = IV::GTVar::new_input(cs.clone(), || Ok(self.result)).unwrap();
+        let bits_a = a_var.to_bits_le()?;
+        let ag_var = g_var.scalar_mul_le(bits_a.iter())?;
+        let bits_b = b_var.to_bits_le()?;
+        let bh_var = h_var.scalar_mul_le(bits_b.iter())?;
+        let ag_var_prep = IV::prepare_g1(&ag_var).unwrap();
+        let bh_var_prep = IV::prepare_g2(&bh_var).unwrap();
+        let result = IV::pairing(ag_var_prep,bh_var_prep).unwrap();
+        res_var.enforce_equal(&result);
         Ok(())
     }
 }
@@ -180,16 +197,16 @@ mod tests {
     use ark_ec::bls12::Bls12;
     use ark_relations::r1cs::ConstraintSystem;
 
-    //#[test]
-    // fn preimage_constraints_correctness() {
-    //     let cs =
-    //         ConstraintSystem::<<Bls12<ark_bls12_377::Config> as Pairing>::BaseField>::new_ref();
-    //     let mut rng = ark_std::test_rng();
-    //     AddVerification::<I, IV>::new(&mut rng)
-    //         .generate_constraints(cs.clone())
-    //         .unwrap();
-    //     assert!(cs.is_satisfied().unwrap());
-    // }
+    #[test]
+    fn preimage_constraints_correctness() {
+        let cs =
+            ConstraintSystem::<<Bls12<ark_bls12_377::Config> as Pairing>::BaseField>::new_ref();
+        let mut rng = ark_std::test_rng();
+        Global::<I, IV>::new(&mut rng)
+            .generate_constraints(cs.clone())
+            .unwrap();
+        assert!(cs.is_satisfied().unwrap());
+    }
 }
 mod test_groth {
 
@@ -209,17 +226,18 @@ mod test_groth {
     use ark_std::rand::{distributions::Uniform, Rng};
     use rand_core::OsRng;
     use rand_core::SeedableRng;
-    //#[test]
-    // fn test_prove_and_verify() {
-    //     let mut rng = ark_std::test_rng();
-    //     let circuit = AddVerification::<I, IV>::new(&mut rng);
-    //     let mut rng2 = rand_chacha::ChaChaRng::seed_from_u64(1776);
-    //     let (pk, vk) = Groth16::<P>::circuit_specific_setup(circuit.clone(), &mut rng2).unwrap();
-    //     let proof = Groth16::<P>::prove(&pk, circuit.clone(), &mut OsRng).unwrap();
-    //     let public_inputs = circuit.clone().ct.unwrap().to_field_elements().unwrap();
-    //     let ok = Groth16::<P>::verify(&pk.vk, &public_inputs, &proof).unwrap();
-    //     assert!(ok);
-    // }
+
+    #[test]
+    fn test_prove_and_verify() {
+        let mut rng = ark_std::test_rng();
+        let circuit = Global::<I, IV>::new(&mut rng);
+        let mut rng2 = rand_chacha::ChaChaRng::seed_from_u64(1776);
+        let (pk, vk) = Groth16::<P>::circuit_specific_setup(circuit.clone(), &mut rng2).unwrap();
+        let proof = Groth16::<P>::prove(&pk, circuit.clone(), &mut OsRng).unwrap();
+        let public_inputs = circuit.clone().result.to_field_elements().unwrap();
+        let ok = Groth16::<P>::verify(&pk.vk, &public_inputs, &proof).unwrap();
+        assert!(ok);
+    }
     // #[test]
     // fn test_prove_and_verify2() {
     //     let mut rng = ark_std::test_rng();
