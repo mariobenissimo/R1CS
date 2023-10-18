@@ -8,3 +8,5 @@ mod scalarfiled;
 mod gadd;
 
 mod g1scalpar;
+
+mod allocstruct;
