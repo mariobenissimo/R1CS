@@ -32,6 +32,10 @@ where
         let x_var = FpVar::new_witness(cs.clone(), || Ok(self.x.unwrap())).unwrap();
         let y_var = FpVar::new_witness(cs.clone(), || Ok(self.y.unwrap())).unwrap();
         let result_var = FpVar::new_input(cs.clone(), || Ok(self.result.unwrap())).unwrap();
+    
+        println!("{}", cs.num_instance_variables());
+        println!("{}", cs.num_witness_variables());
+
         let result = x_var + y_var;
         result_var.conditional_enforce_equal(&result, &boolean::Boolean::TRUE)?;
         Ok(())
@@ -63,7 +67,7 @@ mod tests {
             Groth16::<E>::generate_random_parameters_with_reduction(c, rng).unwrap()
         };
         let pvk = prepare_verifying_key(&params.vk);
-
+        println!("QUI");
         let c = TestCircuit::<E> {
             x: Some(x),
             y: Some(y),

@@ -9,4 +9,6 @@ mod gadd;
 
 mod g1scalpar;
 
+mod pairing;
+
 mod allocstruct;
