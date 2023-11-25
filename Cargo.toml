@@ -9,7 +9,7 @@ edition = "2021"
 ark-serialize = { version = "^0.4.0", features = [ "derive" ] }
 ark-ff = { version = "^0.4.0"}
 ark-poly = {version = "^0.4.0"}
-ark-crypto-primitives = {version = "^0.4.0", features = ["sponge", "r1cs"] }
+ark-crypto-primitives = {version = "0.4.0", features = ["sponge", "r1cs"] }
 ark-std = { version = "^0.4.0", default-features = false }
 ark-groth16 = { version = "0.4.0", features = ["r1cs" ] }
 ark-test-curves = { wversion = "^0.4.0", features = ["bls12_381_curve"] }
@@ -22,6 +22,8 @@ ark-bls12-381 = { version = "^0.4.0", features = ["curve"] }
 derivative = { version = "2", features = [ "use_core" ] }
 rayon = { version = "1"}
 ark-ec = "0.4.2"
+json = "0.12.4"
+ark-sponge = { version = "^0.3.0" , features = ["r1cs"] }
 ark-bw6-761 = { version = "^0.4.0" }
 
 [dev-dependencies]
@@ -30,6 +32,16 @@ ark-bls12-377 = { version = "^0.4.0", features = [ "curve", "r1cs"]  }
 ark-mnt4-298 = { version = "0.4.0", default-features = false, features = ["r1cs", "curve"] }
 rand_chacha = "0.3.1"
 
+poseidon-paramgen = { git = "https://github.com/nikkolasg/poseidon377", branch = "feat/v0.4" }
+poseidon-parameters = { git = "https://github.com/nikkolasg/poseidon377", branch = "feat/v0.4" }
+# Needed for ark-blst 
+blstrs = { version = "^0.6.1", features = ["__private_bench"] }
+
+lazy_static = "1.4.0"
+
 [features]
 default = ["std"]
 std = ["ark-ff/std", "ark-relations/std", "ark-std/std", "num-bigint/std"]
+
+[patch.crates-io]
+blstrs = { git = "https://github.com/nikkolasg/blstrs", branch = "feat/arkwork" }
