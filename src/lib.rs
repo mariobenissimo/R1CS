@@ -12,3 +12,7 @@ mod g1scalpar;
 mod pairing;
 
 mod allocstruct;
+
+mod ark_snark;
+
+mod parameters;
